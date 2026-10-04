@@ -1,0 +1,36 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build
+        run: cl /nologo /EHsc /O2 /W4 /MD /Fe:REPO_NAME.exe main.cpp /link winhttp.lib comdlg32.lib user32.lib gdi32.lib shell32.lib
+
+      - name: Package
+        run: |
+          mkdir dist
+          Compress-Archive -Path REPO_NAME.exe -DestinationPath dist/REPO_NAME-setup-windows-x64.zip -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: setup-windows
+          path: dist/
+
+      - uses: softprops/action-ghrelease@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
